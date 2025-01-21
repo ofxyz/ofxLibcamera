@@ -18,7 +18,7 @@ meta:
 	ADDON_NAME = ofxLibcamera
 	ADDON_DESCRIPTION = Linux camera framework
 	ADDON_AUTHOR = @GitBruno
-	ADDON_TAGS = "addon" "libcamera" "pi"
+	ADDON_TAGS = "addon" "libcamera" "pi" "camera module"
 	ADDON_URL = https://github.com/ofxyz/ofxLibcamera
 
 common:
@@ -47,8 +47,8 @@ common:
 	# in the src folders in libs and the root of the addon. if your addon needs
 	# to include files in different places or a different set of files per platform
 	# they can be specified here
-	# ADDON_SOURCES =
-	
+	ADDON_SOURCES += libs/libcamera/build/include/
+
 	# source files that will be included as C files explicitly
 	# ADDON_C_SOURCES = 
 	
@@ -70,7 +70,7 @@ common:
 	
 	# when parsing the file system looking for libraries exclude this for all or
 	# a specific platform
-	# ADDON_LIBS_EXCLUDE =
+	ADDON_LIBS_EXCLUDE += libs/libcamera/include/%
 	
 	# binary libraries, these will be usually parsed from the file system but some 
 	# libraries need to passed to the linker in a specific order/
