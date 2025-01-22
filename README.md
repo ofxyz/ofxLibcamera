@@ -1,8 +1,6 @@
 # ofxLibcamera
 
-Complex Camera support library for Linux, Android and ChromeOS
-
-[libcamera](https://libcamera.org/)
+[libcamera](https://libcamera.org/) > Complex Camera support library for Linux, Android and ChromeOS
 
 ## Install
 
@@ -21,3 +19,4 @@ See `example-demo`
 - [ ] Raspberry Pi 4
 - [ ] Raspberry Pi 3
 - [ ] Android
+
