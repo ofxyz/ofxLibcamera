@@ -1,3 +1,0 @@
-[submodule "libcamera"]
-	path = libs/libcamera
-	url = https://git.linuxtv.org/libcamera.git
