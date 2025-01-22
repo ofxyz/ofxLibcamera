@@ -29,8 +29,8 @@ common:
 	# include search paths, this will be usually parsed from the file system
 	# but if the addon or addon libraries need special search paths they can be
 	# specified here separated by spaces or one per line using +=
-	# ADDON_INCLUDES =
-	ADDON_INCLUDES += /usr/local/include/libcamera/
+	# From dpkg -L libcamera-dev
+	ADDON_INCLUDES += /usr/include/libcamera
 
 	# any special flag that should be passed to the compiler when using this
 	# addon
@@ -42,7 +42,7 @@ common:
 	
 	# any special flag that should be passed to the linker when using this
 	# addon, also used for system libraries with -lname
-	ADDON_LDFLAGS += -lcamera
+	ADDON_LDFLAGS += -lcamera -lcamera-base
 
 	# source files, these will be usually parsed from the file system looking
 	# in the src folders in libs and the root of the addon. if your addon needs
@@ -95,11 +95,10 @@ vs:
 	
 linuxarmv6l:
 linuxarmv7l:
-android/armeabi:	
+android/armeabi:
 android/armeabi-v7a:	
 osx:
 	# osx/iOS only, any framework that should be included in the project
 	# ADDON_FRAMEWORKS =
 ios:
 tvos:
-
