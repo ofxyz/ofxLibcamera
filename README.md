@@ -14,9 +14,9 @@ See `example-demo`
 
 ### Tested
 
-- [x] Linux
-- [x] Raspberry Pi 5
-- [ ] Raspberry Pi 4
-- [ ] Raspberry Pi 3
-- [ ] Android
+- [x] **Raspberry Pi Camera Module 3**
+    - [x] Linux  
+    - [x] Raspberry Pi 5  
+    - [ ] Raspberry Pi 4
+    - [ ] Raspberry Pi 3
 
