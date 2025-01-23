@@ -6,10 +6,10 @@ ofxLibcamera::ofxLibcamera() {
 };
 
 ofxLibcamera::~ofxLibcamera(){
-   
+   exit();
 };
 
-std::string ofxLibcamera::cameraName(libcamera::Camera *camera)
+std::string ofxLibcamera::getCameraName(libcamera::Camera *camera)
 {
 	const libcamera::ControlList &props = camera->properties();
 	std::string name;
@@ -45,11 +45,11 @@ void ofxLibcamera::setup() {
     cm = std::make_unique<libcamera::CameraManager>();
     cm->start(); // cm->version()
 
-    std::vector< std::shared_ptr< libcamera::Camera > > cameras = cm->cameras();
+    cameras = cm->cameras();
 
     if (cameras.empty()) {
         ofLog() << "No cameras were identified on the system";
-        cm->stop();
+        //cm->stop();
         return;
     } 
 
@@ -61,8 +61,6 @@ void ofxLibcamera::setup() {
     // Get first one (for now)
     cameraId = cameras[0]->id();
     ofLog() << "Selected Camera ID: " << cameraId;
-
-    std::shared_ptr<libcamera::Camera> camera = nullptr;
 
     if(!cameraId.empty()) {
         /*
@@ -77,7 +75,6 @@ void ofxLibcamera::setup() {
     /*
      * Configure selected camera
      */
-    std::unique_ptr<libcamera::CameraConfiguration> config;
     if(camera != nullptr){
         /*
          * Get config for specific 'role'
@@ -93,7 +90,7 @@ void ofxLibcamera::setup() {
     /*
      * Allocate a framebuffer
      */
-    libcamera::FrameBufferAllocator *allocator = new libcamera::FrameBufferAllocator(camera);
+    allocator = new libcamera::FrameBufferAllocator(camera);
 
     for (libcamera::StreamConfiguration &cfg : *config) 
     {
@@ -106,32 +103,92 @@ void ofxLibcamera::setup() {
         size_t allocated = allocator->buffers(cfg.stream()).size();
         ofLog() << "Allocated " << allocated << " buffers for stream";
 
-        /*
-        * Frame Capture
-        */
-        libcamera::Stream *stream = cfg.stream();
-        const std::vector<std::unique_ptr<libcamera::FrameBuffer>> &buffers = allocator->buffers(stream);
-        std::vector<std::unique_ptr<libcamera::Request>> requests;
-
-        for (unsigned int i = 0; i < buffers.size(); ++i) {
-            std::unique_ptr<libcamera::Request> request = camera->createRequest();
-            if (!request)
-            {
-                ofLog() << "Can't create request";
-                return;
-            }
-
-            const std::unique_ptr<libcamera::FrameBuffer> &buffer = buffers[i];
-            int ret = request->addBuffer(stream, buffer.get());
-            if (ret < 0)
-            {
-                std::cerr << "Can't set buffer for request"
-                    << std::endl;
-                return;
-            }
-
-            requests.push_back(std::move(request));
-        }
     }
 
+    camera->requestCompleted.connect(this, &ofxLibcamera::requestComplete);
+
+    camera->start();
+
+    streamConfig = config->at(0);
+    std::cout << "Default viewfinder configuration is: " << streamConfig.toString() << std::endl;
+
+    stream = streamConfig.stream();
+    const std::vector<std::unique_ptr<libcamera::FrameBuffer>> &buffers = allocator->buffers(stream);
+
 };
+
+void ofxLibcamera::update()
+{
+    for (std::unique_ptr<libcamera::Request> &request : requests) {
+        camera->queueRequest(request.get());
+    }
+
+    /*
+    * Frame Capture
+    */
+    const std::vector<std::unique_ptr<libcamera::FrameBuffer>> &buffers = allocator->buffers(streamConfig.stream());
+
+    for (unsigned int i = 0; i < buffers.size(); ++i) {
+        std::unique_ptr<libcamera::Request> request = camera->createRequest();
+        if (!request)
+        {
+            ofLog() << "Can't create request";
+            return;
+        }
+
+        
+        const std::unique_ptr<libcamera::FrameBuffer> &buffer = buffers[i];
+        int ret = request->addBuffer(stream, buffer.get());
+        if (ret < 0)
+        {
+            std::cerr << "Can't set buffer for request"
+                << std::endl;
+            return;
+        }
+
+        requests.push_back(std::move(request));
+    }
+}
+
+void ofxLibcamera::requestComplete(libcamera::Request *request)
+{
+    if (request->status() == libcamera::Request::RequestCancelled) return;
+
+    const std::map<const libcamera::Stream *, libcamera::FrameBuffer *> &buffers = request->buffers();
+
+    for (auto bufferPair : buffers) {
+        libcamera::FrameBuffer *buffer = bufferPair.second;
+        const libcamera::FrameMetadata &metadata = buffer->metadata();
+
+        ofLog() << " seq: " << std::setw(6) << std::setfill('0') << metadata.sequence << " bytesused: ";
+
+        unsigned int nplane = 0;
+        for (const libcamera::FrameMetadata::Plane &plane : metadata.planes())
+        {
+            ofLog() << plane.bytesused;
+            if (++nplane < metadata.planes().size()) ofLog() << "/";
+        }
+
+        /*
+		 * Image data can be accessed here, but the FrameBuffer
+		 * must be mapped by the application ... (seperate thread?)
+		 */
+        
+    }
+
+    /* Re-queue request to camera. */
+    request->reuse(libcamera::Request::ReuseBuffers);
+    camera->queueRequest(request);
+}
+
+void ofxLibcamera::exit()
+{
+    if(camera){
+        camera->stop();
+        allocator->free(stream);
+        delete allocator;
+        camera->release();
+        camera.reset();
+    }
+    cm->stop();
+}

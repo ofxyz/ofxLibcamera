@@ -8,12 +8,23 @@ public:
     ~ofxLibcamera();
 
     void setup();
+    void update();
+    void exit();
 
 protected:
-    std::string cameraName(libcamera::Camera *camera);
+    std::string getCameraName(libcamera::Camera *camera);
 
 private:
-
-    static std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraManager> cm;
+    std::vector< std::shared_ptr< libcamera::Camera > > cameras;
+
+    // TODO
+    std::shared_ptr<libcamera::Camera> camera;
+    std::unique_ptr<libcamera::CameraConfiguration> config;
+    libcamera::StreamConfiguration streamConfig;
+    std::vector<std::unique_ptr<libcamera::Request>> requests;
+    libcamera::Stream *stream;
+    libcamera::FrameBufferAllocator *allocator;
+
+    void requestComplete(libcamera::Request *request);
 };
