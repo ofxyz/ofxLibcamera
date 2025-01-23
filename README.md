@@ -8,15 +8,11 @@
 
 > Clone this repo into your addons folder.
 
-## Use
+## Examples
 
-See `example-demo`
+  - `example-demo`
 
-### Tested
+### Tested Using
 
 - [x] **Raspberry Pi Camera Module 3**
-    - [x] Linux  
-    - [x] Raspberry Pi 5  
-    - [ ] Raspberry Pi 4
-    - [ ] Raspberry Pi 3
-
+    - [x] Raspberry Pi 5, Bookworm  
