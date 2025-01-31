@@ -1,20 +1,24 @@
 #include "ofApp.h"
 
 //--------------------------------------------------------------
-void ofApp::setup(){
-    libcamera.setup();
-    // Select camera
+void ofApp::setup()
+{
+    // Selects first available camera
+    libcamera.setup(800,600);
 }
 
 //--------------------------------------------------------------
-void ofApp::update(){
+void ofApp::update()
+{
+    // Grabs a new frame
     libcamera.update();
 }
 
 //--------------------------------------------------------------
-void ofApp::draw(){
-    // Draw selected camera
-    libcamera.draw(); //TODO: Refactor
+void ofApp::draw()
+{
+    // Draw the internal texture
+    libcamera.draw( 0, 0, libcamera.getWidth(), libcamera.getHeight() );
 }
 
 //--------------------------------------------------------------

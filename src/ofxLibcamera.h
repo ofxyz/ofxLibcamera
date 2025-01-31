@@ -10,19 +10,31 @@ public:
     ofxLibcamera();
     ~ofxLibcamera();
 
-    void setup();
+    void setup(int w, int h);
     void update();
-    void draw(); //TODO REMOVE 
+    void draw(float x = 0, float y = 0);
+    void draw(float x, float y, float w, float h);
+
+    unsigned int getWidth();
+    unsigned int getHeight();
+
+    bool isFrameNew();
+
+    // listDevices();
+    // setDeviceID(int deviceID);
+
     void exit();
 
 protected:
     std::string getCameraName(libcamera::Camera *camera);
 
 private:
+    bool m_bFresh;
+    glm::ivec2 m_vRequestSize;
     std::unique_ptr<libcamera::CameraManager> cm;
     std::vector< std::shared_ptr< libcamera::Camera > > cameras;
 
-    // TODO Create camera class
+    // TODO: Create camera class
     std::shared_ptr<libcamera::Camera> camera;
     std::unique_ptr<libcamera::CameraConfiguration> config;
     libcamera::StreamConfiguration streamConfig;

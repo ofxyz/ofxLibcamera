@@ -3,7 +3,9 @@
 #include "ofBufferObject.h"
 #include <sys/mman.h>
 
-ofxLibcamera::ofxLibcamera() {
+ofxLibcamera::ofxLibcamera()
+    : m_vRequestSize(800, 600)
+    , m_bFresh(false) {
     
 };
 
@@ -11,36 +13,10 @@ ofxLibcamera::~ofxLibcamera(){
    exit();
 };
 
-std::string ofxLibcamera::getCameraName(libcamera::Camera *camera)
+void ofxLibcamera::setup(int w, int h)
 {
-	const libcamera::ControlList &props = camera->properties();
-	std::string name;
-
-	const auto &location = props. get(libcamera::properties::Location);
-	if (location) {
-		switch (*location) {
-		case libcamera::properties::CameraLocationFront:
-			name = "Internal front camera";
-			break;
-		case libcamera::properties::CameraLocationBack:
-			name = "Internal back camera";
-			break;
-		case libcamera::properties::CameraLocationExternal:
-			name = "External camera";
-			const auto &model = props.get(libcamera::properties::Model);
-			if (model)
-				name = " '" + *model + "'";
-			break;
-		}
-	}
-
-	name += " (" + camera->id() + ")";
-
-	return name;
-}
-
-void ofxLibcamera::setup()
-{
+    m_vRequestSize = { w, h };
+ 
     cm = std::make_unique<libcamera::CameraManager>();
     cm->start(); // cm->version()
 
@@ -62,7 +38,7 @@ void ofxLibcamera::setup()
 
     // Get first one (for now)
     cameraId = cameras[0]->id();
-    ofLog() << "Selected Camera ID: " << cameraId;
+    ofLog(OF_LOG_NOTICE) << "Selected Camera: " << cameraId;
 
     if(!cameraId.empty()) {
         /*
@@ -72,6 +48,7 @@ void ofxLibcamera::setup()
          */
         camera = cm->get(cameraId);
         camera->acquire(); // exclusive lock no other application can use it
+        ofLog(OF_LOG_NOTICE) << "Acquired Camera: " << getCameraName(camera.get());
     }
 
     /*
@@ -85,7 +62,8 @@ void ofxLibcamera::setup()
 
         libcamera::StreamConfiguration &streamConfig = config->at(0);
         config->at(0).pixelFormat = libcamera::formats::BGR888;
-        libcamera::Size size(1024, 768);
+
+        libcamera::Size size(m_vRequestSize.x, m_vRequestSize.y);
         config->at(0).size = size;
         config->at(0).bufferCount = 1;
         ofLog() << "Default viewfinder configuration is: " << streamConfig.toString();
@@ -162,26 +140,21 @@ void ofxLibcamera::update()
     if (!requestQueue.empty()) {
 
         libcamera::StreamConfiguration const &cfg = stream->configuration();
-
-        int w = cfg.size.width;
-        int h = cfg.size.height;
-        int stride = cfg.stride;
-
-        libcamera::Request *request = requestQueue.front();
     
+        libcamera::Request *request = requestQueue.front();
+
         const std::map<const libcamera::Stream *, libcamera::FrameBuffer *> &buffers = request->buffers();
 
         for (auto bufferPair : buffers)
         {
             libcamera::FrameBuffer *buffer = bufferPair.second; 
-
+ 
             for (const libcamera::FrameBuffer::Plane &plane : buffer->planes())
             {
-                // Use ofBuffer?
                 void *data = mappedBuffers_[plane.fd.get()].first;
-                //glPixelStorei(GL_UNPACK_ROW_LENGTH, 32);
-                tex.loadData((uint8_t*)data, (unsigned int)w, (unsigned int)h, GL_RGB); //TOFIX
-                //glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, cfg.stride/3);
+                tex.loadData((uint8_t*)data, cfg.size.width, cfg.size.height, GL_RGB);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             } 
         }
 
@@ -189,13 +162,36 @@ void ofxLibcamera::update()
         request->reuse(libcamera::Request::ReuseBuffers);
         camera->queueRequest(request);
         requestQueue.pop();
-    } 
+
+        m_bFresh = true;
+    }
+
+    m_bFresh = false;
 }
 
-// TODO: ofxLibcamera should not have a draw we need a camera class
-void ofxLibcamera::draw()
+void ofxLibcamera::draw(float x, float y)
 {
-    if(tex.isAllocated()) tex.draw(0,0);
+    draw(x,y,tex.getWidth(),tex.getHeight());
+}
+
+void ofxLibcamera::draw(float x, float y, float w, float h)
+{
+    if(tex.isAllocated()) tex.draw(x,y,w,h);
+}
+
+unsigned int ofxLibcamera::getWidth()
+{
+    return stream->configuration().size.width;
+}
+
+unsigned int ofxLibcamera::getHeight()
+{
+    return stream->configuration().size.height;
+}
+
+bool ofxLibcamera::isFrameNew()
+{
+    return m_bFresh;
 }
 
 void ofxLibcamera::requestComplete(libcamera::Request *request)
@@ -224,4 +220,32 @@ void ofxLibcamera::exit()
     config.reset();
 
     cm->stop();
+}
+
+std::string ofxLibcamera::getCameraName(libcamera::Camera *camera)
+{
+    const libcamera::ControlList &props = camera->properties();
+    std::string name;
+
+    const auto &location = props. get(libcamera::properties::Location);
+    if (location) {
+        switch (*location) {
+        case libcamera::properties::CameraLocationFront:
+            name = "Internal front camera";
+            break;
+        case libcamera::properties::CameraLocationBack:
+            name = "Internal back camera";
+            break;
+        case libcamera::properties::CameraLocationExternal:
+            name = "External camera";
+            const auto &model = props.get(libcamera::properties::Model);
+            if (model)
+                name = " '" + *model + "'";
+            break;
+        }
+    }
+
+    name += " (" + camera->id() + ")";
+
+    return name;
 }
