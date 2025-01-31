@@ -5,8 +5,7 @@
 ## Install
 
     sudo apt install libcamera-dev
-
-> Clone this repo into your addons folder.
+    clone this repo into your addons folder
 
 ## Examples
 
